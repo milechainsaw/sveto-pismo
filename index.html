@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="sr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Свето писмо</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            /* Arrange children in a column */
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            /* 100% of the viewport height */
+            margin: 0;
+        }
+
+        #verseContainer {
+            max-width: 600px;
+            margin: 20px;
+            /* Adjust vertical padding */
+        }
+
+        #quote {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        #bookAndIndex {
+            font-style: italic;
+            font-size: 1rem;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        #scriptSelection {
+            margin-top: 10px;
+        }
+
+        #loadingSpinner {
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #333;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="verseContainer">
+        <div id="loadingSpinner" class="spinner"></div>
+        <div id="quote"></div>
+        <div id="bookAndIndex"></div>
+    </div>
+
+    <div class="button-container">
+        <button class="button" onclick="getPreviousQuote()">⏮️</button>
+        <button class="button" onclick="getRandomQuote()">🎲</button>
+        <button class="button" onclick="getNextQuote()">⏭️</button>
+    </div>
+
+    <div id="scriptSelection">
+        <label>
+            <input id="latBtn" type="radio" name="script" value="lat" onchange="changeScript('lat')" checked>
+            Latinica
+        </label>
+        <label>
+            <input id="cyrBtn" type="radio" name="script" value="cyr" onchange="changeScript('cyr')">
+            Ћирилица
+        </label>
+    </div>
+
+    <script>
+        let Cyr2Lat = {
+            "а": "a",
+            "б": "b",
+            "ц": "c",
+            "д": "d",
+            "е": "e",
+            "ф": "f",
+            "г": "g",
+            "х": "h",
+            "и": "i",
+            "ј": "j",
+            "к": "k",
+            "л": "l",
+            "м": "m",
+            "н": "n",
+            "о": "o",
+            "п": "p",
+            "р": "r",
+            "с": "s",
+            "т": "t",
+            "у": "u",
+            "в": "v",
+            "з": "z",
+
+            "А": "A",
+            "Б": "B",
+            "Ц": "C",
+            "Д": "D",
+            "Е": "E",
+            "Ф": "F",
+            "Г": "G",
+            "Х": "H",
+            "И": "I",
+            "Ј": "J",
+            "К": "K",
+            "Л": "L",
+            "М": "M",
+            "Н": "N",
+            "О": "O",
+            "П": "P",
+            "Р": "R",
+            "С": "S",
+            "Т": "T",
+            "У": "U",
+            "В": "V",
+            "З": "Z",
+
+            "ч": "č",
+            "ћ": "ć",
+            "ж": "ž",
+            "ш": "š",
+            "љ": "lj",
+            "њ": "nj",
+            "ђ": "đ",
+            "џ": "dz",
+
+            "Ч": "Č",
+            "Ћ": "Ć",
+            "Ж": "Ž",
+            "Ш": "Š",
+            "Љ": "Lj",
+            "Њ": "Nj",
+            "Ђ": "Đ",
+            "Џ": "Dž"
+        };
+
+        const jsonUrl = 'serbian-cyrillic-danicic-karadzic.json';
+
+        let verses = [];
+        let currentIndex = localStorage.getItem('lastIndex');
+        if (!currentIndex) {
+            currentIndex = 1;
+        }
+
+        function transliterate(text) {
+            return text.replace(/./g, match => Cyr2Lat[match] || match);
+        }
+
+        function changeScript(script) {
+            currentScript = script;
+            localStorage.setItem('currentScript', currentScript);
+            displayQuote(currentIndex);
+        }
+
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        loadingSpinner.style.display = 'inline-block';
+        fetch(jsonUrl)
+            .then(response => response.json())
+            .then(data => {
+                verses = data;
+                displayQuote(currentIndex);
+            })
+            .catch(error => console.error('Error fetching quotes:', error))
+            .finally(() => {
+                // Hide the loading spinner once the data is loaded
+                loadingSpinner.style.display = 'none';
+            });
+
+        function displayQuote(index) {
+            let currentScript = localStorage.getItem('currentScript');
+            if (!currentScript) {
+                changeScript('cyr');
+            } else {
+                if (currentScript == 'cyr') {
+                    document.getElementById('cyrBtn').checked = true
+                } else {
+                    document.getElementById('latBtn').checked = true
+                }
+            }
+            const verseElement = document.getElementById('quote');
+            const bookAndIndexElement = document.getElementById('bookAndIndex');
+
+            const verse = verses.find(v => v.global_index == index);
+
+            if (currentScript == 'lat') {
+                verseElement.textContent = transliterate(verse.verse_text);
+                bookAndIndexElement.textContent = transliterate(`${verse.book_title}, глава ${verse.chapter}, стих ${verse.verse_index}`);
+            } else {
+                verseElement.textContent = verse.verse_text;
+                bookAndIndexElement.textContent = `${verse.book_title}, глава ${verse.chapter}, стих ${verse.verse_index}`;
+            }
+            localStorage.setItem('lastIndex', index);
+        }
+
+        function getPreviousQuote() {
+            currentIndex = currentIndex - 1;
+            if (currentIndex <= 0) {
+                currentIndex = 1
+            }
+            displayQuote(currentIndex);
+        }
+
+        function getRandomQuote() {
+            currentIndex = Math.floor(Math.random() * verses.length);
+            displayQuote(currentIndex);
+        }
+
+        function getNextQuote() {
+            currentIndex = currentIndex + 1;
+            if (currentIndex > 31100) {
+                currentIndex = 31100;
+            }
+            displayQuote(currentIndex);
+        }
+    </script>
+</body>
+
+</html>
